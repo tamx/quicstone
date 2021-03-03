@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -21,10 +22,10 @@ const message = "foobar"
 // We start a server echoing data on the first stream the client opens,
 // then connect with a client, send the message, and wait for its receipt.
 func main() {
-	if len(os.Args) > 2 {
-		log.Fatal(echoServer(os.Args[1], os.Args[2]))
+	if len(os.Args) > 3 {
+		log.Fatal(echoServer(os.Args[2], os.Args[3]))
 	} else {
-		err := clientMain(os.Args[1])
+		err := clientMain(os.Args[1], os.Args[2])
 		if err != nil {
 			panic(err)
 		}
@@ -32,27 +33,30 @@ func main() {
 }
 
 // Start a server that echos all data on the first stream opened by the client
-func echoServer(port, address string) error {
-	listener, err := quic.ListenAddr(port, generateTLSConfig(), nil)
+func echoServer(listenPort, address string) error {
+	listener, err := quic.ListenAddr(listenPort,
+		generateTLSConfig(), nil)
 	if err != nil {
 		return err
 	}
 	for {
-		sess, err := listener.Accept()
+		sess, err := listener.Accept(context.Background())
 		if err != nil {
 			return err
 		}
+		proto := sess.ConnectionState().NegotiatedProtocol
+		log.Println("Proto: " + proto)
 		go func() {
-			stream, err := sess.AcceptStream()
+			stream, err := sess.AcceptStream(context.Background())
 			if err != nil {
-				panic(err)
+				log.Println(err)
+				return
 			}
 			defer stream.Close()
-			// Echo through the loggingWriter
-			stream.Read(make([]byte, 1))
 			upstream, err := net.Dial("tcp", address)
 			if err != nil {
-				panic(err)
+				log.Println(err)
+				return
 			}
 			defer upstream.Close()
 			go io.Copy(upstream, stream)
@@ -61,22 +65,35 @@ func echoServer(port, address string) error {
 	}
 }
 
-func clientMain(addr string) error {
-	session, err := quic.DialAddr(addr, &tls.Config{InsecureSkipVerify: true}, nil)
+func clientMain(listenPort, addr string) error {
+	listener, err := net.Listen("tcp", listenPort)
 	if err != nil {
 		return err
 	}
+	for {
+		connection, err := listener.Accept()
+		if err != nil {
+			return err
+		}
+		go func() {
+			session, err := quic.DialAddr(addr,
+				&tls.Config{InsecureSkipVerify: true,
+					NextProtos: []string{"quic-echo-example"},
+				}, nil)
+			if err != nil {
+				log.Println(err)
+				return
+			}
 
-	stream, err := session.OpenStreamSync()
-	if err != nil {
-		return err
+			stream, err := session.OpenStreamSync(context.Background())
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			go io.Copy(stream, connection)
+			io.Copy(connection, stream)
+		}()
 	}
-	stream.Write([]byte{1})
-
-	go io.Copy(stream, os.Stdin)
-	io.Copy(os.Stdout, stream)
-
-	return nil
 }
 
 // A wrapper for io.Writer that also logs the message.
@@ -105,5 +122,8 @@ func generateTLSConfig() *tls.Config {
 	if err != nil {
 		panic(err)
 	}
-	return &tls.Config{Certificates: []tls.Certificate{tlsCert}}
+	return &tls.Config{
+		Certificates: []tls.Certificate{tlsCert},
+		NextProtos:   []string{"quic-echo-example"},
+	}
 }
