@@ -7,8 +7,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"io"
-	"log"
 	"math/big"
 	"net"
 	"os"
@@ -21,7 +21,7 @@ func help() {
 	usage := "\n" +
 		"client y.cane.jp:443 :10022:ssh :13389:rdp\n" +
 		"server -l 0.0.0.0:443 ssh:localhost:22 rdp:Windows10:3389\n"
-	log.Println(usage)
+	fmt.Println(usage)
 }
 
 // We start a server echoing data on the first stream the client opens,
@@ -30,13 +30,16 @@ func main() {
 	if len(os.Args) < 3 {
 		help()
 	} else if os.Args[1] == "-l" {
-		log.Fatal(echoServer(os.Args[2],
-			parseALPNforServer(os.Args[3:])))
+		err := echoServer(os.Args[2],
+			parseALPNforServer(os.Args[3:]))
+		if err != nil {
+			fmt.Println(err)
+		}
 	} else {
 		err := clientMain(os.Args[1],
 			parseALPNforClient(os.Args[2:]))
 		if err != nil {
-			log.Println(err)
+			fmt.Println(err)
 		}
 	}
 }
@@ -100,12 +103,12 @@ func echoServer(listenPort string, addrs []*ALPNMap) error {
 			return err
 		}
 		proto := sess.ConnectionState().NegotiatedProtocol
-		log.Println("Proto: " + proto)
+		fmt.Println("Proto: " + proto)
 		if proto == "echo" {
 			go func() {
 				stream, err := sess.AcceptStream(context.Background())
 				if err != nil {
-					log.Println(err)
+					fmt.Println(err)
 					return
 				}
 				defer stream.Close()
@@ -119,13 +122,13 @@ func echoServer(listenPort string, addrs []*ALPNMap) error {
 				go func() {
 					stream, err := sess.AcceptStream(context.Background())
 					if err != nil {
-						log.Println(err)
+						fmt.Println(err)
 						return
 					}
 					defer stream.Close()
 					upstream, err := net.Dial("tcp", address)
 					if err != nil {
-						log.Println(err)
+						fmt.Println(err)
 						return
 					}
 					defer upstream.Close()
@@ -145,33 +148,34 @@ func clientMain(dAddr string, addrs []*ALPNMap) error {
 		go func() {
 			listener, err := net.Listen("tcp", addr)
 			if err != nil {
-				log.Println(err)
+				fmt.Println(err)
 				errCh <- err
 				return
 			}
 			for {
 				connection, err := listener.Accept()
 				if err != nil {
-					log.Println(err)
+					fmt.Println(err)
 					errCh <- err
 					return
 				}
-				log.Println(proto)
+				fmt.Println(proto)
 				go func() {
+					defer connection.Close()
+
 					session, err := quic.DialAddr(dAddr,
 						&tls.Config{InsecureSkipVerify: true,
 							NextProtos: []string{proto},
 						}, nil)
 					if err != nil {
-						log.Println(err)
+						fmt.Println(err)
 						return
 					}
 
-					defer connection.Close()
 					stream, err := session.
 						OpenStreamSync(context.Background())
 					if err != nil {
-						log.Println(err)
+						fmt.Println(err)
 						return
 					}
 					// stream.Write([]byte{0})
