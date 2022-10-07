@@ -102,7 +102,7 @@ func echoServer(listenPort string, addrs []*ALPNMap) error {
 		if err != nil {
 			return err
 		}
-		proto := sess.ConnectionState().NegotiatedProtocol
+		proto := sess.ConnectionState().TLS.NegotiatedProtocol
 		fmt.Println("Proto: " + proto)
 		if proto == "echo" {
 			go func() {
