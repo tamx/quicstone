@@ -1,2 +1,4 @@
-bin/
-pkg/
+.vscode/
+go.sum
+quicstone
+quicstone.exe

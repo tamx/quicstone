@@ -14,7 +14,7 @@ import (
 	"os"
 	"strings"
 
-	quic "github.com/lucas-clemente/quic-go"
+	quic "github.com/quic-go/quic-go"
 )
 
 func help() {
@@ -163,7 +163,9 @@ func clientMain(dAddr string, addrs []*ALPNMap) error {
 				go func() {
 					defer connection.Close()
 
-					session, err := quic.DialAddr(dAddr,
+					session, err := quic.DialAddr(
+						context.Background(),
+						dAddr,
 						&tls.Config{InsecureSkipVerify: true,
 							NextProtos: []string{proto},
 						}, nil)
