@@ -2,6 +2,7 @@ require (
 	github.com/buger/jsonparser v1.1.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/lucas-clemente/quic-go v0.29.1
+	github.com/microcosm-cc/bluemonday v1.0.16
 	github.com/quic-go/quic-go v0.47.0
 	golang.org/x/image v0.18.0
 	google.golang.org/grpc v1.56.3
@@ -268,7 +269,6 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
-	github.com/microcosm-cc/bluemonday v1.0.1 // indirect
 	github.com/minio/asm2plan9s v0.0.0-20200509001527-cdd76441f9d8 // indirect
 	github.com/minio/c2goasm v0.0.0-20190812172519-36a3d3bbc4f3 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
