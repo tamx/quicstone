@@ -92,8 +92,10 @@ func echoServer(listenPort string, addrs []*ALPNMap) error {
 		protos = append(protos, alpn.Proto)
 	}
 
+	// listener, err := quic.ListenAddr(listenPort,
+	// 	generateTLSConfig(protos), nil)
 	listener, err := quic.ListenAddr(listenPort,
-		generateTLSConfig(protos), nil)
+		loadTLSConfig(protos), nil)
 	if err != nil {
 		return err
 	}
@@ -220,4 +222,29 @@ func generateTLSConfig(protos []string) *tls.Config {
 		Certificates: []tls.Certificate{tlsCert},
 		NextProtos:   protos,
 	}
+}
+
+var (
+	keyPem = []byte(`-----BEGIN EC PRIVATE KEY-----
+-----END EC PRIVATE KEY-----`)
+	certPem = []byte(`-----BEGIN CERTIFICATE-----
+-----END CERTIFICATE-----`)
+)
+
+func loadTLSConfig(protos []string) *tls.Config {
+	// cert, err := tls.LoadX509KeyPair(
+	// 	"./startup/certs/k.cane.jp+rsa",
+	// 	// "./startup/certs/k.cane.jp",
+	// 	"./startup/certs/acme_account+key",
+	// )
+	cert, err := tls.X509KeyPair(certPem, keyPem)
+	if err != nil {
+		println(err.Error())
+		return nil
+	}
+	config := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		NextProtos:   protos,
+	}
+	return config
 }
