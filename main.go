@@ -225,6 +225,8 @@ func generateTLSConfig(protos []string) *tls.Config {
 }
 
 var (
+	// both PEM are from one domain cert file.
+	// example: ./certs/s.cane.jp
 	keyPem = []byte(`-----BEGIN EC PRIVATE KEY-----
 -----END EC PRIVATE KEY-----`)
 	certPem = []byte(`-----BEGIN CERTIFICATE-----
@@ -233,9 +235,7 @@ var (
 
 func loadTLSConfig(protos []string) *tls.Config {
 	// cert, err := tls.LoadX509KeyPair(
-	// 	"./startup/certs/k.cane.jp+rsa",
-	// 	// "./startup/certs/k.cane.jp",
-	// 	"./startup/certs/acme_account+key",
+	// 	"./certs/s.cane.jp",
 	// )
 	cert, err := tls.X509KeyPair(certPem, keyPem)
 	if err != nil {
